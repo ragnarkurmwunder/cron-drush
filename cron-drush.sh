@@ -108,7 +108,7 @@ function determine__leader_script {
   fi
 
   # Note that backslash skips aliasing.
-  local guess="$(\which leader.py &>/dev/null || true)"
+  local guess="$(\which aws-leader.py &>/dev/null || true)"
   if [ -f "$guess" ]; then
     export LEADER_SCRIPT="$guess"
     return

@@ -6,7 +6,7 @@ Originally it has been developed in AWS context, so it may contain some specific
 
 ## Installation
 
-1. Copy the script to your system `/usr/local/bin/drin-drush.sh`
+1. Copy the script to your system `/usr/local/bin/cron-drush.sh`
 1. Give it execution rights `chmod 755 /usr/local/bin/cron-drush.sh`
 1. Configure system cron (see below)
 1. Configure environment variables (see below)
@@ -31,43 +31,40 @@ Those variables have to be specified in cron file,
 or in AWS case those can be also in `envvars`
 which is used automatically.
 
+All environment variables are optional.
+
 * `BASE_URL`
 
-  Optional.
   In makes sense only in single-site setup when some Drupal functionality may need it and creating drush aliases files is not needed.<br>
   Example: `https://www.example.com`
 
 * `COMPOSER_HOME`
 
-  Optional.
   This is needed for script to find `drush`.
   In composer dir there is `vendor/bin` which contains `drush`.<br>
   Default: `/usr/lib/composer/vendor/bin/drush`
 
 * `CRON_DRUSH_LOG`
 
-  Optional.
   Location cron drush logfile.<br>
   Default: `/var/log/cron-drush.log`
 
 * `LEADER_SCRIPT`
 
-  Optional.
   This is needed only in multi-instance setup where there are multiple web servers against one database.
   The script determines by exit code 0 which instance is considered "leader" in the group.<br>
   The value may be absolute path or relative path.
   In latter case the script is searched from PATH.<br>
-  Default: `leader.py`
+  Default: `aws-leader.py`, if present in the system.
 
 * `WEBROOT`
 
-  Optional.
   Drush needs to know where Drupal is located.<br>
   Default: tries to guess between some common paths.
 
 * `WEBUSER`
 
-  Optional. Specifies web server user for running `drush` as.<br>
+  Specifies web server user for running `drush` as.<br>
   Default: tries to guess between some common usernames.
 
 ## Usage
@@ -87,3 +84,7 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 ```
 
 Drop drush aliases file into `/etc/drush` folder, so that homeless webserver user can find it.
+
+## References:
+
+* AWS leader script -- https://github.com/ragnarkurmwunder/aws-leader
