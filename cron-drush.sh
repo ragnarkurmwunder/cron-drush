@@ -91,40 +91,13 @@ function determine__webroot {
 }
 
 
-# Need to initiate log file as root,
-# because later, being as web user,
-# we lack permissions to do so.
-function init_logfile {
-   touch "$CRON_DRUSH_LOG"
-   chown "$WEB_USER" "$CRON_DRUSH_LOG"
-}
-
-
-# Make sure this script is run as web user.
-function switch_users {
-
+# Make sure this script is run as root.
+function ensure_root {
   local current_user="$(id -un)"
-
-  case "$current_user" in
-
-    root)
-      # Web user does not have home,
-      # so we must circumvent.
-      init_logfile
-      sudo -u "$WEB_USER" "$0" "$@"
-      exit "$?"
-      ;;
-
-    "$WEB_USER")
-      true
-      ;;
-
-    *)
-      echo "Execute this script as 'root'."
-      exit 1
-      ;;
-
-  esac
+  if [ "$current_user" != 'root' ]; then
+    echo "Execute this script as 'root'."
+    exit 1
+  fi
 }
 
 
@@ -185,15 +158,25 @@ function determine_drush_command_line {
 # It also generates stats.
 function execute_drush {
   local stats="$1"
+  local exit_code="$2"
+  # Start debug.
   set -x
-  /usr/bin/time -f 'time=%es, mem=%Mkb' -o "$stats" "${cmd[@]}"
+  # Use 'time' with full path not to collide with other versions of it.
+  # Execute as web user.
+  # Make sure that failed drush wont kill us (set -e) and failure gets logged (|| true).
+  # Sudo can pass the environment, except PATH.
+  sudo -E -u "$WEB_USER" PATH="$PATH" /usr/bin/time -f 'time=%es, mem=%Mkb' -o "$stats" "${cmd[@]}" || true
+  echo "$?" > "$exit_code"
+  # Stop debug silently.
   { set +x; } &>/dev/null
 }
 
 
-# Log stats to Syslog.
+# Log stats end exit_code to Syslog.
 function log_stats {
-  local msg="$(cat "$stats")"
+  local stats="$1"
+  local exit_code="$2"
+  local msg="$(cat "$stats"), exit_code=$(cat "$exit_code")"
   # To syslog.
   logger -t "drush-cron" -- "$msg"
   # To our log.
@@ -211,7 +194,7 @@ function main {
   determine__web_user
   determine__webroot
   # It also initialises logfile while root:
-  switch_users "$@"
+  ensure_root
   # From here on, we are executing as web user.
   determine__leader_script
   ensure_leader
@@ -219,15 +202,16 @@ function main {
   logging_start
   # Create temporary dir and remove it upon exiting.
   # Cannot put it into a function, EXIT is emitted on return.
-  local tmp=$(mktemp -d /tmp/cron-drush.XXXXXXXX || exit 1)
+  local tmp=$(sudo -u "$WEB_USER" mktemp -d /tmp/cron-drush.XXXXXXXX || exit 1)
   trap "rm -rf $tmp" EXIT
   stats="$tmp/stats"
+  exit_code="$tmp/exit_code"
   # Note, it creates global $cmd, because cannot return array:
   determine_drush_command_line "$@"
   # Saves stats:
-  execute_drush "$stats"
+  execute_drush "$stats" "$exit_code"
   # Reads stats and saves into log:
-  log_stats "$stats"
+  log_stats "$stats" "$exit_code"
 }
 
 
