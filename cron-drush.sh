@@ -25,23 +25,23 @@ function determine__cron_drush_log {
 
 function determine__web_user {
 
-  # Return if WEB_USER contains a good username.
-  if id -u "$WEB_USER" &>/dev/null; then
+  # Return if WEBUSER contains a good username.
+  if id -u "$WEBUSER" &>/dev/null; then
     return
   fi
 
   # Try to guess web user.
-  unset WEB_USER
+  unset WEBUSER
   local guess
   for guess in webapp www-data apache
   do
     if id -u "$guess" &>/dev/null; then
-      export WEB_USER="$guess"
+      export WEBUSER="$guess"
       return
     fi
   done
 
-  echo "Environment variable 'WEB_USER' must be set. Needed to run `drush` as proper user."
+  echo "Environment variable 'WEBUSER' must be set. Needed to run `drush` as proper user."
   exit 1
 }
 
@@ -165,7 +165,7 @@ function execute_drush {
   # Execute as web user.
   # Make sure that failed drush wont kill us (set -e) and failure gets logged (|| true).
   # Sudo can pass the environment, except PATH.
-  sudo -E -u "$WEB_USER" PATH="$PATH" /usr/bin/time -f 'time=%es, mem=%Mkb' -o "$stats" "${cmd[@]}" || true
+  sudo -E -u "$WEBUSER" PATH="$PATH" /usr/bin/time -f 'time=%es, mem=%Mkb' -o "$stats" "${cmd[@]}" || true
   echo "$?" > "$exit_code"
   # Stop debug silently.
   { set +x; } &>/dev/null
@@ -202,7 +202,7 @@ function main {
   logging_start
   # Create temporary dir and remove it upon exiting.
   # Cannot put it into a function, EXIT is emitted on return.
-  local tmp=$(sudo -u "$WEB_USER" mktemp -d /tmp/cron-drush.XXXXXXXX || exit 1)
+  local tmp=$(sudo -u "$WEBUSER" mktemp -d /tmp/cron-drush.XXXXXXXX || exit 1)
   trap "rm -rf $tmp" EXIT
   stats="$tmp/stats"
   exit_code="$tmp/exit_code"

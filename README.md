@@ -20,7 +20,7 @@ Originally it has been developed in AWS context, so it may contain some specific
 #### Example
 
 ```
-WEB_USER=apache2
+WEBUSER=apache2
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 0 * * * *  root  cron-drush.sh cron
 ```
@@ -65,7 +65,7 @@ which is used automatically.
   Drush needs to know where Drupal is located.<br>
   Default: tries to guess between some common paths.
 
-* `WEB_USER`
+* `WEBUSER`
 
   Optional. Specifies web server user for running `drush` as.<br>
   Default: tries to guess between some common usernames.
