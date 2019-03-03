@@ -159,16 +159,17 @@ function determine_drush_command_line {
 function execute_drush {
   local stats="$1"
   local exit_code="$2"
-  # Start debug.
-  set -x
-  # Use 'time' with full path not to collide with other versions of it.
+  # Disable error check temporarily to be able to capture exit code.
+  set +e
   # Execute as web user.
-  # Make sure that failed drush wont kill us (set -e) and failure gets logged (|| true).
   # Sudo can pass the environment, except PATH.
-  sudo -E -u "$WEBUSER" PATH="$PATH" /usr/bin/time -f 'time=%es, mem=%Mkb' -o "$stats" "${cmd[@]}" || true
-  echo "$?" > "$exit_code"
-  # Stop debug silently.
-  { set +x; } &>/dev/null
+  # Use subshell for debugging, otherwise we cannot extract exit code cleanly.
+  # Bash requires a bit funny way to pass command arguments.
+  # Use 'time' with full path not to collide with other versions of it.
+  sudo -E -u "$WEBUSER" PATH="$PATH" bash -x -c '/usr/bin/time "$@"' -- -f 'time=%es, mem=%Mkb' -o "$stats" "${cmd[@]}"
+  echo "exit_code=$?" > "$exit_code"
+  # Enable error checking
+  set -e
 }
 
 
@@ -176,7 +177,7 @@ function execute_drush {
 function log_stats {
   local stats="$1"
   local exit_code="$2"
-  local msg="$(cat "$stats"), exit_code=$(cat "$exit_code")"
+  local msg="$(cat "$stats"), $(cat "$exit_code")"
   # To syslog.
   logger -t "drush-cron" -- "$msg"
   # To our log.
