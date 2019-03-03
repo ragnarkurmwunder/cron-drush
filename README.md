@@ -31,58 +31,44 @@ Those variables have to be specified in cron file,
 or in AWS case those can be also in `envvars`
 which is used automatically.
 
-#### CRON_DRUSH_LOG
+* `BASE_URL`
 
-Optional.
+  Optional.
+  In makes sense only in single-site setup when some Drupal functionality may need it and creating drush aliases files is not needed.<br>
+  Example: `https://www.example.com`
 
-Location cron drush logfile.
+* `COMPOSER_HOME`
 
-Default: `/var/log/cron-drush.log`
+  Optional.
+  This is needed for script to find `drush`.
+  In composer dir there is `vendor/bin` which contains `drush`.<br>
+  Default: `/usr/lib/composer/vendor/bin/drush`
 
-#### WEB_USER
+* `CRON_DRUSH_LOG`
 
-Optional.
+  Optional.
+  Location cron drush logfile.<br>
+  Default: `/var/log/cron-drush.log`
 
-Specifies web server user for running `drush` as.
+* `LEADER_SCRIPT`
 
-Default: tries to guess between some common usernames.
+  Optional.
+  This is needed only in multi-instance setup where there are multiple web servers against one database.
+  The script determines by exit code 0 which instance is considered "leader" in the group.<br>
+  The value may be absolute path or relative path.
+  In latter case the script is searched from PATH.<br>
+  Default: `leader.py`
 
-#### COMPOSER_HOME
+* `WEBROOT`
 
-Optional.
+  Optional.
+  Drush needs to know where Drupal is located.<br>
+  Default: tries to guess between some common paths.
 
-This is needed for script to find `drush`.
-In composer dir there is `vendor/bin` which contains `drush`.
+* `WEB_USER`
 
-Default: `/usr/lib/composer/vendor/bin/drush`
-
-#### WEBROOT
-
-Optional.
-
-Drush needs to know where Drupal is located.
-
-Default: tries to guess between some common paths.
-
-#### LEADER_SCRIPT
-
-Optional.
-
-This is needed only in multi-instance setup where there are multiple web servers against one database.
-The script determines by exit code 0 which instance is considered "leader" in the group.
-
-The value may be absolute path or relative path.
-In latter case the script is searched from PATH.
-
-Default: `leader.py`
-
-#### BASE_URL
-
-Optional.
-
-In makes sense only in single-site setup when some Drupal functionality may need it and creating drush aliases files is not needed.
-
-Example: `https://www.example.com`
+  Optional. Specifies web server user for running `drush` as.<br>
+  Default: tries to guess between some common usernames.
 
 ## Usage
 
