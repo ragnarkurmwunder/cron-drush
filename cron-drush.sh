@@ -192,7 +192,6 @@ function main {
   determine__cron_drush_log
   determine__web_user
   determine__webroot
-  # It also initialises logfile while root:
   ensure_root
   # From here on, we are executing as web user.
   determine__leader_script
