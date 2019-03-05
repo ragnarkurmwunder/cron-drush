@@ -131,13 +131,8 @@ function ensure_leader {
 function logging_start {
 
   # Redirect stdout and stderr to append to a logfile.
+  # Collect all errors during execution of the script.
   exec &>>"$CRON_DRUSH_LOG"
-
-  # Add some space to log followed by timestamp.
-  echo
-  echo
-  echo
-  date
 }
 
 
@@ -159,27 +154,46 @@ function determine_drush_command_line {
 function execute_drush {
   local stats="$1"
   local exit_code="$2"
+  local output="$3"
   # Disable error check temporarily to be able to capture exit code.
   set +e
   # Execute as web user.
   # Sudo can pass the environment, except PATH.
   # Use 'time' with full path not to collide with other versions of it.
-  sudo -E -u "$WEBUSER" PATH="$PATH" /usr/bin/time -f 'time=%es, mem=%Mkb' -o "$stats" "${cmd[@]}"
+  sudo -E -u "$WEBUSER" PATH="$PATH" /usr/bin/time -f 'time=%es, mem=%Mkb' -o "$stats" "${cmd[@]}" &>"$output"
   echo "exit_code=$?" > "$exit_code"
   # Enable error checking
   set -e
 }
 
 
-# Log stats end exit_code to Syslog.
-function log_stats {
+# Log to Syslog.
+function log_syslog {
   local stats="$1"
   local exit_code="$2"
   local msg="$(cat "$stats"), $(cat "$exit_code"), command=${cmd[*]}"
-  # To syslog.
   logger -t "drush-cron" -- "$msg"
-  # To our log.
-  echo "$msg"
+}
+
+
+# Log to cron-drush.log.
+# Note that output is directed to cron-drush.log
+function log_cron_drush {
+
+  local stats="$1"
+  local exit_code="$2"
+  local output="$3"
+
+  # Separator between messages.
+  echo
+  echo
+  echo
+
+  date
+  echo "${cmd[*]}"
+  cat "$output"
+  cat "$stats"
+  cat "$exit_code"
 }
 
 
@@ -202,14 +216,15 @@ function main {
   # Cannot put it into a function, EXIT is emitted on return.
   local tmp=$(sudo -u "$WEBUSER" mktemp -d /tmp/cron-drush.XXXXXXXX || exit 1)
   trap "rm -rf $tmp" EXIT
-  stats="$tmp/stats"
-  exit_code="$tmp/exit_code"
+  local stats="$tmp/stats"
+  local exit_code="$tmp/exit_code"
+  local output="$tmp/output"
   # Note, it creates global $cmd, because cannot return array:
   determine_drush_command_line "$@"
-  # Saves stats:
-  execute_drush "$stats" "$exit_code"
+  execute_drush "$stats" "$exit_code" "$output"
   # Reads stats and saves into log:
-  log_stats "$stats" "$exit_code"
+  log_syslog "$stats" "$exit_code"
+  log_cron_drush "$stats" "$exit_code" "$output"
 }
 
 
