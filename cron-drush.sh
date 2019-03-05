@@ -172,7 +172,7 @@ function log_syslog {
   local stats="$1"
   local exit_code="$2"
   local msg="$(cat "$stats"), $(cat "$exit_code"), command=${cmd[*]}"
-  logger -t "drush-cron" -- "$msg"
+  logger -t "cron-drush" -- "$msg"
 }
 
 
