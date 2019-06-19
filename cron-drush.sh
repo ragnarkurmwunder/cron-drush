@@ -5,6 +5,8 @@
 
 # Fail if error.
 set -e
+# Fail if using unset variable.
+set -u
 
 
 # AWS-specific: read envvars into current environment
@@ -26,8 +28,10 @@ function determine__cron_drush_log {
 function determine__web_user {
 
   # Return if WEBUSER contains a good username.
-  if id -u "$WEBUSER" &>/dev/null; then
-    return
+  if [[ -v WEBUSER ]]; then
+    if id -u "$WEBUSER" &>/dev/null; then
+      return
+    fi
   fi
 
   # Try to guess web user.
@@ -103,12 +107,14 @@ function ensure_root {
 
 function determine__leader_script {
 
-  if [ -f "$LEADER_SCRIPT" ]; then
-    return
+  if [[ -v LEADER_SCRIPT ]]; then
+    if [ -f "$LEADER_SCRIPT" ]; then
+      return
+    fi
   fi
 
   # Note that backslash skips aliasing.
-  local guess="$(\which aws-leader.py &>/dev/null || true)"
+  local guess="$(\which aws-leader.py 2>/dev/null || true)"
   if [ -f "$guess" ]; then
     export LEADER_SCRIPT="$guess"
     return
@@ -120,9 +126,11 @@ function determine__leader_script {
 
 
 function ensure_leader {
-  if [ -f "$LEADER_SCRIPT" ]; then
-    if ! "$LEADER_SCRIPT"; then
-      exit
+  if [[ -v LEADER_SCRIPT ]]; then
+    if [ -f "$LEADER_SCRIPT" ]; then
+      if ! "$LEADER_SCRIPT"; then
+        exit
+      fi
     fi
   fi
 }
