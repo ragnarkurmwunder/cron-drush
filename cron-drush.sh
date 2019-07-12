@@ -146,7 +146,7 @@ function logging_start {
 
 # Note, it creates global $cmd, because cannot return array.
 function determine_drush_command_line {
-  if [ -n "$BASE_URL" ]; then
+  if [[ -v BASE_URL ]]; then
     # For a single-site, we assume BASE_URL is defined.
     cmd=(drush --root="$WEBROOT" --uri="$BASE_URL" "$@")
   else
