@@ -25,6 +25,13 @@ function determine__cron_drush_log {
 }
 
 
+function log_error_and_exit {
+  local msg="$1"
+  echo -e "\n\n\nExecution of $0 was prevented by error: $msg"
+  exit 1
+}
+
+
 function determine__web_user {
 
   # Return if WEBUSER contains a good username.
@@ -45,8 +52,7 @@ function determine__web_user {
     fi
   done
 
-  echo "Environment variable 'WEBUSER' must be set. Needed to run `drush` as proper user."
-  exit 1
+  log_error_and_exit "Environment variable 'WEBUSER' must be set. Needed to run 'drush' as proper user."
 }
 
 
@@ -68,8 +74,7 @@ function determine__composer_home {
     return
   fi
 
-  echo "Environment variable 'COMPOSER_HOME' must be set. Expecting to find 'drush' under '$COMPOSER_HOME/vendor/bin'."
-  exit 1
+  log_error_and_exit "Environment variable 'COMPOSER_HOME' must be set. Expecting to find 'drush' under '$COMPOSER_HOME/vendor/bin'."
 }
 
 
@@ -90,7 +95,7 @@ function determine__webroot {
     fi
   done
 
-  echo "Environment variable 'WEBROOT' must be set. 'drush' needs to know where Drupal is located."
+  log_error_and_exit "Environment variable 'WEBROOT' must be set. 'drush' needs to know where Drupal is located."
   exit 1
 }
 
@@ -159,7 +164,7 @@ function determine_drush_command_line {
 
 # Debug/Log the actual drush command line executed.
 # It also generates stats.
-function execute_drush {
+function execute {
   local stats="$1"
   local exit_code="$2"
   local output="$3"
@@ -180,7 +185,7 @@ function log_syslog {
   local stats="$1"
   local exit_code="$2"
   local msg="$(cat "$stats"), $(cat "$exit_code"), command=${cmd[*]}"
-  logger -t "cron-drush" -- "$msg"
+  logger -t 'cron-drush' -p 'cron.info' -- "$msg"
 }
 
 
@@ -205,33 +210,60 @@ function log_cron_drush {
 }
 
 
+# Check if it is safe/ok to run cron now?
+function ok_to_run {
+
+  local stats="$1"
+  local exit_code="$2"
+  local output="$3"
+
+  cmd=(cron-drush-ok-to-run.sh)
+
+  if ! hash "${cmd[0]}" &>/dev/null ; then
+    return 0
+  fi
+
+  execute "$stats" "$exit_code" "$output"
+  local exit_code=$(cat "$exit_code")
+
+  if (( "$exit_code" > 0 )) ; then
+    logger -t "cron-drush" -- "Execution of $0 was prevented by: ${cmd[*]}"
+    return 1
+  else
+    return 0
+  fi
+}
+
+
 function main {
   load_aws_envvars
-  determine__composer_home
-  # Set PATH as early as possible, but after load_aws_envvars and determine__composer_home,
-  # because they mey distort or influence PATH.
-  export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:$COMPOSER_HOME/vendor/bin"
-  determine__cron_drush_log
-  determine__web_user
-  determine__webroot
+  # Set PATH as early as possible, but after load_aws_envvars,
+  # because it may distort or influence PATH.
+  export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin"
   ensure_root
   # From here on, we are executing as web user.
   determine__leader_script
   ensure_leader
   # Start logging after leader is determined:
+  determine__cron_drush_log
   logging_start
-  # Create temporary dir and remove it upon exiting.
-  # Cannot put it into a function, EXIT is emitted on return.
+  # determine web user, webroot and composer home after logging started.
+  determine__web_user
+  determine__webroot
+  determine__composer_home
+  export PATH="$PATH:$COMPOSER_HOME/vendor/bin"
   local tmp=$(sudo -u "$WEBUSER" mktemp -d /tmp/cron-drush.XXXXXXXX || exit 1)
   trap "rm -rf $tmp" EXIT
   local stats="$tmp/stats"
   local exit_code="$tmp/exit_code"
   local output="$tmp/output"
-  # Note, it creates global $cmd, because cannot return array:
-  determine_drush_command_line "$@"
-  execute_drush "$stats" "$exit_code" "$output"
-  # Reads stats and saves into log:
-  log_syslog "$stats" "$exit_code"
+  if ok_to_run "$stats" "$exit_code" "$output" ; then
+    # Note, it creates global $cmd, because cannot return array:
+    determine_drush_command_line "$@"
+    execute "$stats" "$exit_code" "$output"
+    # Reads stats and saves into log:
+    log_syslog "$stats" "$exit_code"
+  fi
   log_cron_drush "$stats" "$exit_code" "$output"
 }
 
