@@ -4,10 +4,8 @@
 # It will execute drush as web user.
 # Source: https://github.com/ragnarkurmwunder/cron-drush/blob/master/cron-drush.sh
 
-# Fail if error.
-set -e
-# Fail if using unset variable.
-set -u
+# Fail if error, if unset var, if pipeline error
+set -euo pipefail
 
 
 # AWS-specific: read envvars into current environment
