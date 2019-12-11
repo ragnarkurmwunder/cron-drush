@@ -234,8 +234,15 @@ function ok_to_run {
   fi
 }
 
+function change_dir {
+  # drush: chdir(): Permission denied (errno 13)
+  # drush must be executed in folder where it can do chdir as webuser.
+  cd /
+}
+
 
 function main {
+  change_dir
   load_aws_envvars
   # Set PATH as early as possible, but after load_aws_envvars,
   # because it may distort or influence PATH.
