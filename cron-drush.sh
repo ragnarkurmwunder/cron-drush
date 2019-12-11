@@ -2,6 +2,7 @@
 
 # This script must be executed as root.
 # It will execute drush as web user.
+# Source: https://github.com/ragnarkurmwunder/cron-drush/blob/master/cron-drush.sh
 
 # Fail if error.
 set -e
