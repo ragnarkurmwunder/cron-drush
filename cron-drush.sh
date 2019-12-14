@@ -8,13 +8,17 @@
 set -euo pipefail
 
 
-# AWS-specific: read envvars into current environment
-# It may contain important variables for us.
-function load_aws_envvars {
-  local envvars=/opt/elasticbeanstalk/support/envvars
-  if [ -f "$envvars" ]; then
-    source "$envvars"
-  fi
+# Read populate current environment.
+function load_envvars {
+  local envvars
+  for envvars in \
+    /etc/environment.export \
+    /opt/elasticbeanstalk/support/envvars
+  do
+    if [ -f "$envvars" ]; then
+      source "$envvars"
+    fi
+  done
 }
 
 
@@ -242,7 +246,7 @@ function change_dir {
 
 function main {
   change_dir
-  load_aws_envvars
+  load_envvars
   # Set PATH as early as possible, but after load_aws_envvars,
   # because it may distort or influence PATH.
   export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin"
